@@ -1,0 +1,2 @@
+# Keep the data files byte for byte on every checkout, so the SHA-256 checksums in data/PROVENANCE.md hold
+data/raw/** -text
