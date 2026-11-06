@@ -8,6 +8,7 @@
 #   - extracts the 33 analysis gauges from the EDEN daily stage file and assembles the gauge table;
 #   - saves the Florida and Lake Okeechobee outlines from the R package maps, so that rendering the
 #     analysis does not need that package (install it with install.packages("maps") to re-run this script);
+#   - counts annual snail kite nests in the Everglades wetlands from the kite nest-survival file;
 #   - writes data/PROVENANCE.md with SHA-256 checksums.
 #
 # Original public sources:
@@ -21,6 +22,8 @@
 #   Gauge coordinates: Haider et al. 2026, USGS data release, doi:10.5066/P13BBYUJ
 #   Species silhouettes: PhyloPic (CC0); see data/raw/icons/icons_attribution.csv
 #   Florida and Lake Okeechobee outlines: R package maps 3.4.4 (GPL-2), databases "state" and "lakes"
+#   Snail kite nests (CC BY 4.0): Fletcher 2024, figshare, doi:10.6084/m9.figshare.23540790.v3,
+#     file nest_survival_1996_2021.csv
 #
 # Run from the project root:  Rscript data/get_data.R
 
@@ -74,6 +77,19 @@ lake <- dplyr::filter(ggplot2::map_data("lakes"), region == "Lake Okeechobee")
 write_csv(dplyr::select(fl, long, lat, group, order), file.path(out, "florida_outline.csv"))
 write_csv(dplyr::select(lake, long, lat, group, order), file.path(out, "lake_okeechobee_outline.csv"))
 
+# ---- snail kite: annual nests in the Everglades wetlands (exploratory comparison) ----------
+# Unique nests per breeding-season year in the wetlands of the wading-bird survey area: Loxahatchee NWR
+# (WCA-1), WCA-2A, WCA-2B, WCA-3A, WCA-3B and Everglades National Park. Years without a nest there are 0.
+kite_areas <- c("Loxahatchee", "WCA2A", "WCA2B", "WCA3A", "WCA3B", "ENP")
+read_csv(file.path(src, "data/raw/kite/KI-51/nest_survival_1996_2021.csv"), show_col_types = FALSE) |>
+  filter(Area %in% kite_areas) |>
+  distinct(Year, Nest_ID) |>
+  count(Year, name = "nests") |>
+  right_join(tibble(Year = 1996:2021), by = "Year") |>
+  transmute(year = Year, nests = coalesce(nests, 0L)) |>
+  arrange(year) |>
+  write_csv(file.path(out, "kite_nests_everglades.csv"))
+
 # ---- species silhouettes (PhyloPic, CC0; recoloured copies) -------------------------------
 icon_src <- c(kite = "kite", stork = "stork1", ibis = "ibis1")
 attr_all <- read_csv(file.path(src, "data/raw/icons/icons_attribution.csv"), show_col_types = FALSE)
@@ -94,10 +110,12 @@ cite <- list(
   elev = "Haider SM, McCloskey B, Telis PA (2024) Ground-surface elevation, vegetation, and land type within approximately 10 and 400 meters of 176 water-level gaging stations in the Greater Everglades, Florida, 2005-10. U.S. Geological Survey data release. https://doi.org/10.5066/P13M7CRD",
   xy   = "Haider SM, Christesson KR, McCloskey B (2026) Gaging station coordinates and subareas for the Everglades Depth Estimation Network. U.S. Geological Survey data release. https://doi.org/10.5066/P13BBYUJ",
   icon = "PhyloPic silhouettes; contributors and UUIDs in data/raw/icons/icons_attribution.csv",
-  maps = "Becker RA, Wilks AR, Brownrigg R, Minka TP, Deckmyn A (2026) maps: Draw Geographical Maps. R package version 3.4.4. https://doi.org/10.32614/CRAN.package.maps"
+  maps = "Becker RA, Wilks AR, Brownrigg R, Minka TP, Deckmyn A (2026) maps: Draw Geographical Maps. R package version 3.4.4. https://doi.org/10.32614/CRAN.package.maps",
+  kite = "Fletcher RJ Jr (2024) Data for Fletcher et al. 2024: An invasive prey and changing climate interact to shape the breeding phenology of an endangered predator. figshare, version 3. https://doi.org/10.6084/m9.figshare.23540790.v3"
 )
 lic <- list(
   cc0  = "CC0 1.0",
+  ccby = "CC BY 4.0",
   gpl  = "GPL-2 (licence of the maps package that distributes these outlines)",
   eden = "EDEN data use terms: free of charge, may be shown, distributed or published at will; acknowledge EDEN/USGS (and the operating agency, NPS or SFWMD, for their gauges); some recent values are provisional",
   usgs = "U.S. Public Domain (USGS); credit requested"
@@ -107,7 +125,8 @@ who <- list(
   eden = "USGS Everglades Depth Estimation Network; gauges operated by USGS, NPS and SFWMD",
   usgs = "U.S. Geological Survey",
   icon = "PhyloPic contributors",
-  maps = "Authors of the R package maps (Becker, Wilks, Brownrigg, Minka, Deckmyn)"
+  maps = "Authors of the R package maps (Becker, Wilks, Brownrigg, Minka, Deckmyn)",
+  kite = "University of Florida snail kite monitoring programme (Fletcher and colleagues)"
 )
 prov <- tribble(
   ~file,                                   ~content,                                                                  ~collected_by, ~licence,  ~citation,
@@ -121,6 +140,7 @@ prov <- tribble(
   "eden_gauges.csv",                       "Gauge table assembled for the 33 analysis gauges: region (WCA/ENP), coordinates and ground elevation (ft NAVD88)", who$usgs, lic$usgs, paste(cite$elev, cite$xy, sep = "; "),
   "florida_outline.csv",                   "Florida state outline (map only), from the maps database 'state'",       who$maps, lic$gpl,  cite$maps,
   "lake_okeechobee_outline.csv",           "Lake Okeechobee outline (map only), from the maps database 'lakes'",     who$maps, lic$gpl,  cite$maps,
+  "kite_nests_everglades.csv",             "Annual snail kite nests (unique nests) in Loxahatchee NWR (WCA-1), WCA-2, WCA-3 and Everglades NP, 1996-2021, counted from the file nest_survival_1996_2021.csv (exploratory comparison only)", who$kite, lic$ccby, cite$kite,
   "icons/icon_kite.png",                   "Silhouette, recoloured during scoping",                                  who$icon, lic$cc0,  cite$icon,
   "icons/icon_stork.png",                  "Silhouette, recoloured during scoping",                                  who$icon, lic$cc0,  cite$icon,
   "icons/icon_ibis.png",                   "Silhouette, recoloured during scoping",                                  who$icon, lic$cc0,  cite$icon,
