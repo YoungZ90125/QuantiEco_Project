@@ -10,9 +10,13 @@ Water management in the Florida Everglades presents a central conservation dilem
 
 ### Main Findings and Predictions
 
-Preliminary analyses suggest that deeper breeding-season water (March–June) is associated with fewer nesting pairs, while wetter preceding wet seasons (June–November) are associated with increased nesting the following year. These patterns suggest that seasonal flooding supports prey production, while subsequent drawdown concentrates prey for breeding birds.
+Each 10 cm increase in breeding-season depth was associated with 28% fewer wood stork pairs and 31% fewer white ibis pairs. For preceding wet-season depth, the corresponding increases were 46% and 28%. These directions remained consistent across robustness checks.
 
-Across six wading-bird species, responses also appear to vary with foraging strategy. Species requiring concentrated prey (wood stork, white ibis, snowy egret) are expected to experience stronger reductions in nesting under deep breeding-season water than flexible foragers (great egret, tricolored heron, great blue heron). Population-growth models will further examine these relationships while accounting for density dependence.
+Density-dependent growth models partly supported the prediction for wood storks, with only the positive wet-season association supported. Neither seasonal association was supported for white ibises.
+
+Across six species, birds requiring concentrated prey showed stronger negative breeding-season associations than flexible foragers (group contrast 0.74, 95% confidence interval 0.64–0.85; p = 0.003). Both groups showed positive preceding wet-season associations.
+
+An exploratory joint comparison for 1996–2021, added after the main results, found a more positive breeding-season association for snail kites than for storks and ibises (p = 0.004 and 0.003). Wet-season associations were positive in all three species.
 
 ### Research Significance
 
