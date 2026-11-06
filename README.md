@@ -30,7 +30,7 @@ These findings highlight a fundamental dilemma in conservation biology: hydrolog
 
 ## Data
 
-Annual maximum nesting-pair counts and foraging classifications come from the University of Florida's Everglades Wading Bird dataset (weecology/EvergladesWadingBird, Zenodo). Daily water levels from 33 stations and ground elevations come from USGS EDEN.
+Annual maximum nesting-pair counts and foraging classifications come from the University of Florida's Everglades Wading Bird dataset (weecology/EvergladesWadingBird, Zenodo). Daily water levels from 33 stations and ground elevations come from USGS EDEN. Annual snail kite nest counts (1996–2021), used only in the exploratory comparison, come from the University of Florida's snail kite monitoring data (Fletcher 2024, figshare).
 
 [`data/PROVENANCE.md`](data/PROVENANCE.md) lists, for every data file, where it came from, who collected it, its licence and how to cite it. The repository's `LICENSE` (MIT) covers the code; the data files keep their original licences.
 
@@ -65,7 +65,7 @@ The packages come from a dated Posit Package Manager snapshot (2026-11-03), whic
 
 - `analysis.html`: the complete analysis, with code;
 - `results/*.csv`: every reported number;
-- `figures/*.png` and `figures/*.pdf`: poster figures F1–F5 and supplementary figures S1–S2.
+- `figures/*.png` and `figures/*.pdf`: figures F1–F6 and supplementary figures S1–S3.
 
 Once the packages are installed, rendering takes about 30 seconds. Randomness (the DHARMa residual simulations and the coefficient draws for K) uses seed `20261104`.
 
