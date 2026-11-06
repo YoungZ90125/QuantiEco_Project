@@ -370,39 +370,45 @@ fig_forest <- function(species_eff, group_eff) {
 
 # ---- F5: r + sN dynamics (prediction 1c) -----------------------------------------------------------
 # Lines: g = r + s*N + bD*D + bW*W under the three water scenarios, labelled at their right ends;
-# open circles: K (g = 0) where K > 0. The subtitle gives the water coefficients (t-based 95 % CIs).
+# open circles: K (g = 0) where K > 0. Shared y axis and x title; the water coefficients go in the caption.
 fig_rsn <- function(transitions, rsn_models, k_tab, data_dir = "data/raw") {
   lty <- c(favourable = "solid", median = "22", unfavourable = "11")
-  panels <- lapply(c("wost", "whib"), function(sp) {
+  parts <- lapply(c("wost", "whib"), function(sp) {
     tr <- transitions[[sp]]
-    m <- rsn_models[[sp]]
-    b <- unname(stats::coef(m))
-    ci <- unname(stats::confint(m))
+    b <- unname(stats::coef(rsn_models[[sp]]))
     kt <- dplyr::filter(k_tab, species == sp)
     xs <- seq(0, max(tr$N_t) * 1.1, length.out = 100)
     lines <- dplyr::bind_rows(lapply(seq_len(nrow(kt)), function(i)
       tibble::tibble(scenario = kt$scenario[i], N = xs, g = b[1] + b[2] * xs + b[3] * kt$D10[i] + b[4] * kt$W10[i])))
-    ends <- dplyr::filter(lines, N == max(N))
-    kpts <- dplyr::filter(kt, !is.na(K), K > 0, K <= max(xs))
-    p <- ggplot() +
-      geom_hline(yintercept = 0, colour = "grey60") +
-      geom_point(data = tr, aes(N_t, g), colour = col_core[[sp]], size = 2, alpha = 0.55) +
-      geom_line(data = lines, aes(N, g, linetype = scenario), colour = col_core[[sp]], linewidth = 1) +
-      geom_text(data = ends, aes(N, g, label = scenario), hjust = -0.1, size = 3.4, colour = col_core[[sp]]) +
-      geom_point(data = kpts, aes(K, 0), shape = 21, colour = col_core[[sp]], fill = "white", size = 3.5, stroke = 1.3) +
-      scale_linetype_manual(values = lty, guide = "none") +
-      scale_x_continuous(expand = expansion(mult = c(0.03, 0.62))) +   # room for the line labels
-      scale_y_continuous(labels = minus_axis) +
-      labs(title = species_names[[sp]],
-           subtitle = sprintf("bD = %s [%s, %s]\nbW = %s [%s, %s] (95%% CI)",
-                              num_label(b[3]), num_label(ci[3, 1]), num_label(ci[3, 2]),
-                              num_label(b[4]), num_label(ci[4, 1]), num_label(ci[4, 2])),
-           x = "Nesting pairs in year t (thousands)", y = "Per-capita rate, ln(N[t+1] / N[t])") +
-      theme_poster(13)
-    patchwork::wrap_elements(full = p + patchwork::inset_element(icon_grob(icon_key[[sp]], data_dir),
-                                                                 left = 0.68, bottom = 0.66, right = 1, top = 1))
+    list(sp = sp, tr = tr, lines = lines, kpts = dplyr::filter(kt, !is.na(K), K > 0, K <= max(xs)))
   })
-  patchwork::wrap_plots(panels, ncol = 2)
+  # one y scale for both species (the same quantity), drawn once at the left; the coefficients go in the caption
+  y_lim <- range(unlist(lapply(parts, function(x) c(x$tr$g, x$lines$g))))
+  y_range <- y_lim + c(-1, 1) * 0.05 * diff(y_lim)   # the default 5 % axis expansion
+  panels <- lapply(parts, function(x) {
+    sp <- x$sp
+    x_max <- max(x$lines$N)
+    x_range <- c(-0.03, 1.85) * x_max                  # the axis expansion below: room for the line labels
+    p <- ggplot() +
+      annotation_custom(icon_grob(icon_key[[sp]], data_dir),   # top right, above the falling lines
+                        xmin = x_range[1] + 0.70 * diff(x_range), xmax = x_range[2],
+                        ymin = y_range[1] + 0.66 * diff(y_range), ymax = y_range[2]) +
+      geom_hline(yintercept = 0, colour = "grey60") +
+      geom_point(data = x$tr, aes(N_t, g), colour = col_core[[sp]], size = 2.6, alpha = 0.55) +
+      geom_line(data = x$lines, aes(N, g, linetype = scenario), colour = col_core[[sp]], linewidth = 1.2) +
+      geom_text(data = dplyr::filter(x$lines, N == x_max), aes(N, g, label = scenario), hjust = -0.1, size = 4.6,
+                colour = col_core[[sp]]) +
+      geom_point(data = x$kpts, aes(K, 0), shape = 21, colour = col_core[[sp]], fill = "white", size = 4.2, stroke = 1.4) +
+      coord_cartesian(ylim = y_lim) +
+      scale_linetype_manual(values = lty, guide = "none") +
+      scale_x_continuous(expand = expansion(mult = c(0.03, 0.85))) +
+      scale_y_continuous(labels = minus_axis) +
+      labs(title = species_names[[sp]], x = "Nesting pairs in year t (thousands)", y = "Per-capita rate") +
+      theme_poster(17)
+    if (sp != "wost") p <- p + theme(axis.title.y = element_blank(), axis.text.y = element_blank())
+    p
+  })
+  patchwork::wrap_plots(panels, ncol = 2) + patchwork::plot_layout(axis_titles = "collect_x")   # one x title
 }
 
 # ---- F6: exploratory comparison with the snail kite ----------------------------------------------

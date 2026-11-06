@@ -84,6 +84,20 @@ test_that("each row's fitted curves pass through the model's prediction at media
   expect_equal(stats::approx(d$depth, d$fit, xout = stats::median(fx_water()$D))$y, unname(at_median), tolerance = 1e-3)
 })
 
+test_that("the r + sN figure: both species on one y scale, no statistics text", {
+  wi <- fx_water()
+  core <- prepare_counts(fx_counts(), wi, c("wost", "whib"))
+  trs <- lapply(split(core, core$species), make_transitions)
+  rms <- lapply(trs, fit_rsn)
+  kt <- dplyr::bind_rows(lapply(names(rms), function(s)
+    dplyr::mutate(k_scenarios(stats::coef(rms[[s]]), stats::vcov(rms[[s]]), water_scenarios(wi)), species = s)))
+  p <- fig_rsn(trs, rms, kt, data_dir = raw(""))
+  y_range <- lapply(1:2, function(i) ggplot2::ggplot_build(p[[i]])$layout$panel_params[[1]]$y.range)
+  expect_equal(y_range[[1]], y_range[[2]])
+  expect_null(p[[1]]$labels$subtitle)
+  expect_equal(p[[1]]$labels$y, "Per-capita rate")
+})
+
 test_that("the map's colonies were counted in at least 3 years up to 2024 and average at least 50 nests", {
   col <- map_colonies(raw(""))
   expect_equal(nrow(col), 37)
