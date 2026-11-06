@@ -81,14 +81,23 @@ write_csv(dplyr::select(lake, long, lat, group, order), file.path(out, "lake_oke
 # Unique nests per breeding-season year in the wetlands of the wading-bird survey area: Loxahatchee NWR
 # (WCA-1), WCA-2A, WCA-2B, WCA-3A, WCA-3B and Everglades National Park. Years without a nest there are 0.
 kite_areas <- c("Loxahatchee", "WCA2A", "WCA2B", "WCA3A", "WCA3B", "ENP")
-read_csv(file.path(src, "data/raw/kite/KI-51/nest_survival_1996_2021.csv"), show_col_types = FALSE) |>
-  filter(Area %in% kite_areas) |>
+kite_nests <- read_csv(file.path(src, "data/raw/kite/KI-51/nest_survival_1996_2021.csv"), show_col_types = FALSE) |>
+  filter(Area %in% kite_areas)
+kite_nests |>
   distinct(Year, Nest_ID) |>
   count(Year, name = "nests") |>
   right_join(tibble(Year = 1996:2021), by = "Year") |>
   transmute(year = Year, nests = coalesce(nests, 0L)) |>
   arrange(year) |>
   write_csv(file.path(out, "kite_nests_everglades.csv"))
+# the same nests by wetland (for the map); wetland-years without a nest are 0
+kite_nests |>
+  distinct(Area, Year, Nest_ID) |>
+  count(Area, Year, name = "nests") |>
+  right_join(tidyr::expand_grid(Area = sort(unique(kite_nests$Area)), Year = 1996:2021), by = c("Area", "Year")) |>
+  transmute(wetland = Area, year = Year, nests = coalesce(nests, 0L)) |>
+  arrange(wetland, year) |>
+  write_csv(file.path(out, "kite_nests_by_wetland.csv"))
 
 # ---- species silhouettes (PhyloPic, CC0; recoloured copies) -------------------------------
 icon_src <- c(kite = "kite", stork = "stork1", ibis = "ibis1")
@@ -141,6 +150,7 @@ prov <- tribble(
   "florida_outline.csv",                   "Florida state outline (map only), from the maps database 'state'",       who$maps, lic$gpl,  cite$maps,
   "lake_okeechobee_outline.csv",           "Lake Okeechobee outline (map only), from the maps database 'lakes'",     who$maps, lic$gpl,  cite$maps,
   "kite_nests_everglades.csv",             "Annual snail kite nests (unique nests) in Loxahatchee NWR (WCA-1), WCA-2, WCA-3 and Everglades NP, 1996-2021, counted from the file nest_survival_1996_2021.csv (exploratory comparison only)", who$kite, lic$ccby, cite$kite,
+  "kite_nests_by_wetland.csv",             "The same snail kite nests by wetland and year (map only)",              who$kite, lic$ccby, cite$kite,
   "icons/icon_kite.png",                   "Silhouette, recoloured during scoping",                                  who$icon, lic$cc0,  cite$icon,
   "icons/icon_stork.png",                  "Silhouette, recoloured during scoping",                                  who$icon, lic$cc0,  cite$icon,
   "icons/icon_ibis.png",                   "Silhouette, recoloured during scoping",                                  who$icon, lic$cc0,  cite$icon,

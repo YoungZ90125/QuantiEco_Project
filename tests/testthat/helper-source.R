@@ -7,6 +7,7 @@ raw <- function(f) file.path(proj, "data", "raw", f)
 
 fx_counts  <- function() readr::read_csv(raw("wading_birds_max_count_all.csv"), show_col_types = FALSE)
 fx_species <- function() readr::read_csv(raw("wading_birds_species_list.csv"), show_col_types = FALSE)
+fx_kite    <- function() readr::read_csv(raw("kite_nests_everglades.csv"), show_col_types = FALSE)
 
 # The water index is slow to build from daily data, so it is computed once per test run.
 fx_water <- local({

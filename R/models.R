@@ -143,12 +143,12 @@ glmm_ok <- function(m) {
   !is.null(m) && identical(as.integer(m$fit$convergence), 0L) && isTRUE(m$sdr$pdHess)
 }
 
-# Fits the specifications in order and returns the first that converges, with its name (a fit that
-# stops with an error counts as not converged). cd6 is community_data() restricted to the six species
-# with a foraging group.
-fit_group_glmm <- function(cd6) {
-  for (spec in names(glmm_formulas)) {
-    m <- tryCatch(fit_glmm(glmm_formulas[[spec]], cd6), error = function(e) NULL)
+# Fits the specifications in `formulas` in order and returns the first that converges, with its name (a
+# fit that stops with an error counts as not converged). cd6 is community_data() restricted to the six
+# species with a foraging group.
+fit_group_glmm <- function(cd6, formulas = glmm_formulas) {
+  for (spec in names(formulas)) {
+    m <- tryCatch(fit_glmm(formulas[[spec]], cd6), error = function(e) NULL)
     if (glmm_ok(m)) return(list(model = m, spec_used = spec))
   }
   stop("No GLMM specification converged")
@@ -310,4 +310,54 @@ decision_summary <- function(core_dec, g_eff, rsn_dec) {
     group_rows(c(W_high = "high grader (W)", W_expl = "exploiter (W)"), "2b", "above")
   ) |>
     dplyr::mutate(hypothesis = substr(prediction, 1, 1), .before = 1)
+}
+
+# ---- Exploratory comparison: snail kite (not one of the five predictions) -------------------------
+
+# Snail kite (snki), wood stork and white ibis over the kite years (1996-2021), in the format of
+# prepare_counts(). kite: data/raw/kite_nests_everglades.csv (year, nests).
+kite_data <- function(counts, kite, water) {
+  kite_rows <- dplyr::transmute(kite, region = "all", species = "snki", year, count = nests)
+  dplyr::bind_rows(counts, kite_rows) |>
+    prepare_counts(water, c("snki", "wost", "whib")) |>
+    dplyr::filter(year %in% kite$year) |>
+    dplyr::mutate(species = factor(species, levels = c("snki", "wost", "whib")))
+}
+
+# One negative-binomial model for the three species, fitted with the Analysis 2 machinery (fit_glmm: a
+# dispersion parameter per species; the same convergence rule). Terms: an intercept, a trend, a D effect
+# and a W effect for each species, and a year random effect shared by the three species. The fallback,
+# set before fitting, drops the year effect.
+kite_formulas <- list(
+  year_re = pairs ~ species + species:year_c + species:D10 + species:W10 + (1 | year),
+  no_year_re = pairs ~ species + species:year_c + species:D10 + species:W10
+)
+
+fit_kite_joint <- function(d3) fit_group_glmm(d3, kite_formulas)
+
+# Rate ratios per +10 cm with Wald 95 % CIs: each species' D and W effect, and the kite's effect relative
+# to each wading bird (kite / wood stork, kite / white ibis; on the log scale a difference, with variance
+# Var(a) + Var(b) - 2 Cov(a, b)), with a Wald p-value for the ratio.
+kite_effects <- function(fit) {
+  b <- glmmTMB::fixef(fit$model)$cond
+  V <- stats::vcov(fit$model)$cond
+  z <- stats::qnorm(0.975)
+  label <- c(snki = "kite", wost = "wood stork", whib = "white ibis")
+  rows <- list()
+  for (term in c("D10", "W10")) {
+    coef_name <- function(sp) paste0("species", sp, ":", term)
+    for (sp in names(label)) {
+      k <- coef_name(sp)
+      rows[[length(rows) + 1]] <- tibble::tibble(term = term, quantity = label[[sp]], log_est = b[[k]], se = sqrt(V[k, k]))
+    }
+    k <- coef_name("snki")
+    for (sp in c("wost", "whib")) {
+      w <- coef_name(sp)
+      rows[[length(rows) + 1]] <- tibble::tibble(term = term, quantity = paste("kite /", label[[sp]]), log_est = b[[k]] - b[[w]],
+                                                 se = sqrt(V[k, k] + V[w, w] - 2 * V[k, w]))
+    }
+  }
+  dplyr::bind_rows(rows) |>
+    dplyr::transmute(term, quantity, estimate = exp(log_est), lo = exp(log_est - z * se), hi = exp(log_est + z * se),
+                     p = ifelse(grepl("/", quantity), 2 * stats::pnorm(-abs(log_est / se)), NA_real_))
 }
